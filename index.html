@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang = 'en'>
+    <head>
+        <meta charset = 'UTF-8'>
+        <title>Contour</title>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+
+        <style>
+            body {
+                font-family: sans-serif;
+                font-size: 15px;
+            }
+            
+            .slider {
+                -webkit-appearance: none;  /* Override default CSS styles */
+                appearance: none;
+                width: 100%; /* Full-width */
+                height: 25px; /* Specified height */
+                background: #d3d3d3; /* Grey background */
+                outline: none; /* Remove outline */
+                opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+                -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+                transition: opacity .2s;
+            }
+        </style>
+    </head>
+    <body>
+        <svg width = '50vw' viewbox = '0 0 512 512'></svg>
+
+        <div class = 'slidecontainer'>
+            <input type = 'range' min = '1' max = '100' value = '50' class = 'slider' id = 'myRange'>
+            <p>Threshold Size: <span id='output'></span></p>
+        </div>
+        
+        <script>
+            const timeSeries = './data/Data_CT.csv';
+            let svg = d3.select('svg');
+            let threshold = 100;
+            let slidecontainer = document.getElementById('myRange');
+            let output = document.getElementById('output');
+            output.innerHTML = slidecontainer.value;
+
+            slidecontainer.oninput = function() {
+                output.innerHTML = this.value;
+                threshold = this.value;
+                plot_contour(timeSeries)
+            }
+
+             let min_val = 700;
+             let max_val = 2000;
+            
+            const path = d3.geoPath();
+
+            function plot_contour(fileName) {
+                //step 1 read csv file
+                d3.csv(fileName).then(function (data) {
+                    //data dimensions
+                    let m = 512, n = 512;
+                    //step 2 convert data into 1D list
+                    let values_T = [];
+                    data.forEach(function (d) {
+                        values_T.push(+d[0])
+                    });
+
+                let colors = d3.scaleLinear()
+                    .domain(d3.range(min_val, max_val,
+                        parseInt(Math.abs(max_val-min_val)/6.5)))
+                    .range(["#0d1a50", "#3e5eba", "#2b83ba",
+                    "#abdda4", "#ffffbf", "#fdae61", "#d7191c"])
+                    .interpolate(d3.interpolateHcl);
+
+                let contours = d3.contours()
+                    .size([m, n])
+                    .thresholds(d3.range(min_val, max_val, threshold)) 
+                    (values_T);
+
+                svg.append('g').attr('class', 'contours')
+                    .selectAll('path')
+                    .data(contours)
+                    .enter()
+                    .append('path')
+                    .attr('d', function(d) {return path(d)})
+                    .attr('stroke', 'black')
+                    .attr('stroke-width', '0.1px')
+                    .attr('stroke-linejoin', 'round')
+                    .attr('fill', function(d) { return colors(d.value)})
+                })
+            }
+
+        plot_contour(timeSeries)
+
+        </script>
+
+    </body>
+</html>
